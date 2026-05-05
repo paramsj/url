@@ -89,3 +89,20 @@ export const clickEvents = pgTable(
     clickedAtIdx: index("idx_click_events_clicked_at").on(table.clickedAt),
   })
 );
+
+export const idRanges = pgTable(
+  "id_ranges",
+  {
+    id: uuid("id").primaryKey().defaultRandom(),
+
+    serverId: text("server_id").notNull().unique(),
+
+    startId: bigint("start_id", { mode: "number" }).notNull(),
+    endId: bigint("end_id", { mode: "number" }).notNull(),
+    nextId: bigint("next_id", { mode: "number" }).notNull(),
+
+    isActive: boolean("is_active").notNull().default(true),
+
+    createdAt: timestamp("created_at").notNull().defaultNow(),
+  }
+);
