@@ -19,9 +19,12 @@ app.use(cookieParser());
 import authRouter from './routes/auth.routes.js';
 import linkRouter from './routes/link.routes.js';
 import healthRouter from './routes/health.routes.js';
+import { redirectToOriginalUrl } from './controllers/link.controllers.js';
 
 app.use('/api/v1/auth',authRouter);
-app.use('/api/v1/link',linkRouter);
+app.use('/api/v1/links',linkRouter);
 app.use('/api/v1/status',healthRouter);
+
+app.get('/:shortCode',redirectToOriginalUrl);
 
 export {app};

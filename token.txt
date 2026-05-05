@@ -1,0 +1,28 @@
+eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYzZTkzMjQ0LWIzZWUtNGJkZi05MDQ2LWZlZGNiODQ3OGI4NyIsImVtYWlsIjoiamFpQGdtYWlsLmNvbSIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzc3OTk1NzU2LCJleHAiOjE3Nzg2MDA1NTZ9.p-1nCAbRjlpZ9hfY0ZGlWPez8q4jh9ptRJTLUPHqJn8
+
+
+curl -X POST http://localhost:3001/api/v1/links \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYzZTkzMjQ0LWIzZWUtNGJkZi05MDQ2LWZlZGNiODQ3OGI4NyIsImVtYWlsIjoiamFpQGdtYWlsLmNvbSIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzc3OTk1NzU2LCJleHAiOjE3Nzg2MDA1NTZ9.p-1nCAbRjlpZ9hfY0ZGlWPez8q4jh9ptRJTLUPHqJn8" \
+-d '{"originalUrl":"https://example.com"}'
+
+
+curl -X POST http://localhost:8080/api/v1/links \
+-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYzZTkzMjQ0LWIzZWUtNGJkZi05MDQ2LWZlZGNiODQ3OGI4NyIsImVtYWlsIjoiamFpQGdtYWlsLmNvbSIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzc3OTk1NzU2LCJleHAiOjE3Nzg2MDA1NTZ9.p-1nCAbRjlpZ9hfY0ZGlWPez8q4jh9ptRJTLUPHqJn8" \
+-H "Content-Type: application/json" \
+-d '{"originalUrl":"https://example.com"}'
+
+https://youtu.be/Sm8z8NGDYqE?si=ZbG8i6QOULwfOqvy
+
+
+curl -X POST http://localhost:3001/api/v1/links \
+-H "Content-Type: application/json" \
+-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYzZTkzMjQ0LWIzZWUtNGJkZi05MDQ2LWZlZGNiODQ3OGI4NyIsImVtYWlsIjoiamFpQGdtYWlsLmNvbSIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzc3OTk1NzU2LCJleHAiOjE3Nzg2MDA1NTZ9.p-1nCAbRjlpZ9hfY0ZGlWPez8q4jh9ptRJTLUPHqJn8" \
+-d '{"originalUrl":"https://youtu.be/Sm8z8NGDYqE?si=ZbG8i6QOULwfOqvy"}'
+
+https://docs.nginx.com/nginx/admin-guide/load-balancer/http-load-balancer/
+
+curl -X POST http://localhost:8080/api/v1/links \
+-H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpZCI6IjYzZTkzMjQ0LWIzZWUtNGJkZi05MDQ2LWZlZGNiODQ3OGI4NyIsImVtYWlsIjoiamFpQGdtYWlsLmNvbSIsInJvbGUiOiJVU0VSIiwiaWF0IjoxNzc3OTk1NzU2LCJleHAiOjE3Nzg2MDA1NTZ9.p-1nCAbRjlpZ9hfY0ZGlWPez8q4jh9ptRJTLUPHqJn8" \
+-H "Content-Type: application/json" \
+-d '{"originalUrl":"https://docs.nginx.com/nginx/admin-guide/load-balancer/http-load-balancer/"}'
