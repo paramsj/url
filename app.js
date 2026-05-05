@@ -18,8 +18,10 @@ app.use(cookieParser());
 
 import authRouter from './routes/auth.routes.js';
 import linkRouter from './routes/link.routes.js';
+import healthRouter from './routes/health.routes.js';
 
 app.use('/api/v1/auth',authRouter);
 app.use('/api/v1/link',linkRouter);
+app.use('/api/v1/status',healthRouter);
 
 export {app};

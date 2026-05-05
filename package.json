@@ -5,7 +5,11 @@
   "main": "index.js",
   "type": "module",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "dev:app1": "cross-env PORT=3001 SERVER_ID=app1 nodemon index.js",
+    "dev:app2": "cross-env PORT=3002 SERVER_ID=app2 nodemon index.js",
+    "dev:app3": "cross-env PORT=3003 SERVER_ID=app3 nodemon index.js",
+    "dev:apps": "concurrently \"npm run dev:app1\" \"npm run dev:app2\" \"npm run dev:app3\""
   },
   "keywords": [],
   "author": "",
@@ -23,6 +27,9 @@
     "postgres": "^3.4.9"
   },
   "devDependencies": {
-    "drizzle-kit": "^0.18.1"
+    "concurrently": "^9.2.1",
+    "cross-env": "^10.1.0",
+    "drizzle-kit": "^0.18.1",
+    "nodemon": "^3.1.14"
   }
 }
