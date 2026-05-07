@@ -9,7 +9,7 @@ import { asyncHandler } from "../utils/asyncHandler.js";
 import { encodeBase62 } from "../utils/encoder.js";
 
 import { redisConnection } from "../db/redis.js";
-
+import { clickQueue } from "../queues/click.queue.js";
 
 const getNextIdForServer = async () => {
   const serverId = process.env.SERVER_ID;
@@ -64,10 +64,16 @@ const createShortLink = asyncHandler(async (req, res) => {
 
   await redisConnection.set(
     `short:${shortCode}`,
-    originalUrl,
+    JSON.stringify({
+      id: createdLink.id,
+      originalUrl: createdLink.originalUrl,
+      isActive: createdLink.isActive,
+      expiresAt: createdLink.expiresAt || null,
+    }),
     "EX",
     60 * 60
   );
+
   return res.status(201).json(
     new ApiResponse(
       201,
@@ -102,18 +108,30 @@ const redirectToOriginalUrl = asyncHandler(async (req, res) => {
 
   const cacheKey = `short:${shortCode}`;
 
-  const cachedUrl = await redisConnection.get(cacheKey);
+  const cached = await redisConnection.get(cacheKey);
 
-  if (cachedUrl) {
-    await db
-      .update(shortLinks)
-      .set({
-        totalClicks: sql`${shortLinks.totalClicks} + 1`,
-      })
-      .where(eq(shortLinks.shortCode, shortCode));
+  if (cached) {
+  const cachedLink = JSON.parse(cached);
 
-    return res.redirect(302, cachedUrl);
+  if (!cachedLink.isActive) {
+    throw new ApiError(403, "Link is disabled");
   }
+
+  if (cachedLink.expiresAt && new Date(cachedLink.expiresAt) < new Date()) {
+    await redisConnection.del(cacheKey);
+    throw new ApiError(403, "Link has expired");
+  }
+
+  await clickQueue.add("log-click", {
+    shortLinkId: cachedLink.id,
+    ipAddress: req.ip,
+    userAgent: req.headers["user-agent"] || null,
+    referrer: req.headers["referer"] || null,
+  });
+
+  return res.redirect(302, cachedLink.originalUrl);
+}
+
 
   const [link] = await db
     .select()
@@ -133,23 +151,27 @@ const redirectToOriginalUrl = asyncHandler(async (req, res) => {
     throw new ApiError(403, "Link has expired");
   }
 
-  await redisConnection.set(cacheKey, link.originalUrl, "EX", 60 * 60);
+await redisConnection.set(
+  cacheKey,
+  JSON.stringify({
+    id: link.id,
+    originalUrl: link.originalUrl,
+    isActive: link.isActive,
+    expiresAt: link.expiresAt,
+  }),
+  "EX",
+  60 * 60
+);
 
-  await db
-    .update(shortLinks)
-    .set({
-      totalClicks: sql`${shortLinks.totalClicks} + 1`,
-    })
-    .where(eq(shortLinks.id, link.id));
+await clickQueue.add("log-click", {
+  shortLinkId: link.id,
+  ipAddress: req.ip,
+  userAgent: req.headers["user-agent"] || null,
+  referrer: req.headers["referer"] || null,
+});
 
-  await db.insert(clickEvents).values({
-    shortLinkId: link.id,
-    ipAddress: req.ip,
-    userAgent: req.headers["user-agent"] || null,
-    referrer: req.headers["referer"] || null,
-  });
+return res.redirect(302, link.originalUrl);
 
-  return res.redirect(302, link.originalUrl);
 });
 
 const getLinkStats = asyncHandler(async(req,res)=>{

@@ -5,6 +5,5 @@ const router = Router();
 
 router.post('/',verifyJWT, createShortLink);
 router.get('/',verifyJWT,getAllLinks);
-router.get('/:shortCode',redirectToOriginalUrl);
 router.get('/:id/stats',verifyJWT,getLinkStats);
 export default router;
