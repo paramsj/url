@@ -150,7 +150,7 @@ export default function StatsPage({ params }: { params: Promise<{ id: string }> 
           <div className="text-lg font-mono truncate">
             {!stats.link?.expiresAt 
               ? 'Never' 
-              : new Date(stats.link.expiresAt).toLocaleDateString()
+              : new Date(stats.link.expiresAt).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })
             }
           </div>
         </motion.div>

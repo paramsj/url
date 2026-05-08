@@ -158,9 +158,9 @@ export default function LinksPage() {
                           {!link.expiresAt ? (
                             <><InfinityIcon size={10} /> Never expires</>
                           ) : isExpired ? (
-                             <><Clock size={10} /> Expired on {new Date(link.expiresAt).toLocaleDateString()}</>
+                             <><Clock size={10} /> Expired at {new Date(link.expiresAt).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</>
                           ) : (
-                             <><Clock size={10} /> Expires on {new Date(link.expiresAt).toLocaleDateString()}</>
+                             <><Clock size={10} /> Expires at {new Date(link.expiresAt).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}</>
                           )}
                         </span>
                       </div>

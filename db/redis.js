@@ -1,9 +1,10 @@
 import IORedis from "ioredis";
 
-const redisConnection = new IORedis({
-    host : '127.0.0.1',
-    port : 6379,
-    maxRetriesPerRequest : null
-});
+const redisConnection = new IORedis(
+  process.env.REDIS_URL || "redis://redis:6379",
+  {
+    maxRetriesPerRequest: null,
+  }
+);
 
-export {redisConnection};
+export { redisConnection };

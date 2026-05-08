@@ -194,6 +194,11 @@ export default function DashboardPage() {
                 onChange={(e) => setExpiresAt(e.target.value)}
                 className="w-full bg-transparent border border-foreground/20 p-2 text-sm font-mono focus:outline-none focus:border-foreground"
               />
+              {expiresAt && (
+                <p className="text-xs font-mono text-muted-foreground mt-2">
+                  This link will expire at {new Date(expiresAt).toLocaleString(undefined, { day: 'numeric', month: 'short', year: 'numeric', hour: 'numeric', minute: '2-digit' })}
+                </p>
+              )}
             </div>
             <button
               type="submit"

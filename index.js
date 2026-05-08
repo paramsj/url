@@ -2,14 +2,12 @@ import dotenv from 'dotenv'
 import { app } from './app.js'
 import { verifyDbConnection } from './db/db.js';
 dotenv.config({
-    path : '.env',
+    path: '.env',
 })
 
 
 const PORT = process.env.PORT || 3000;
 const SERVER_ID = process.env.SERVER_ID || "app1";
-
-
 
 const startServer = async () => {
     try {

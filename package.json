@@ -6,13 +6,15 @@
   "type": "module",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1",
+    "start:api": "node index.js",
     "dev:app1": "cross-env PORT=3001 SERVER_ID=app1 nodemon index.js",
     "dev:app2": "cross-env PORT=3002 SERVER_ID=app2 nodemon index.js",
     "dev:app3": "cross-env PORT=3003 SERVER_ID=app3 nodemon index.js",
     "dev:apps": "concurrently \"npm run dev:app1\" \"npm run dev:app2\" \"npm run dev:app3\"",
-
     "worker:click": "node workers/click.worker.js",
     "worker:expiry": "node workers/expiry.worker.js",
+    "start:click-worker": "node workers/click.worker.js",
+    "start:expiry-worker": "node workers/expiry.worker.js",
     "scheduler:expiry": "node schedulers/expiry.scheduler.js"
   },
   "keywords": [],
