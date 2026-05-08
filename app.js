@@ -7,7 +7,8 @@ import bodyParser from 'body-parser';
 const app = express();
 
 app.use(cors({
-    origin: process.env.CORS_ORIGIN,
+    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    credentials: true,
 }));
 
 
@@ -21,10 +22,10 @@ import linkRouter from './routes/link.routes.js';
 import healthRouter from './routes/health.routes.js';
 import { redirectToOriginalUrl } from './controllers/link.controllers.js';
 
-app.use('/api/v1/auth',authRouter);
-app.use('/api/v1/links',linkRouter);
-app.use('/api/v1/status',healthRouter);
+app.use('/api/v1/auth', authRouter);
+app.use('/api/v1/links', linkRouter);
+app.use('/api/v1/status', healthRouter);
 
-app.get('/:shortCode',redirectToOriginalUrl);
+app.get('/:shortCode', redirectToOriginalUrl);
 
-export {app};
+export { app };

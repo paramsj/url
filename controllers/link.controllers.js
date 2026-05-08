@@ -191,6 +191,7 @@ const getLinkStats = asyncHandler(async(req,res)=>{
 
   return res.status(200).json(
     new ApiResponse(200,{
+      link,
       totalClicks : link.totalClicks,
       clicks,
   },"Stats have been fetched!"));
