@@ -5,6 +5,7 @@ import { apiClient } from "@/lib/api-client"
 import { motion } from "framer-motion"
 import { Copy, ExternalLink, Activity, CheckCircle, XCircle, Clock, Infinity as InfinityIcon } from "lucide-react"
 import Link from "next/link"
+import { ShortLinkDisplay } from "@/components/ShortLinkDisplay"
 
 interface ShortLink {
   id: string
@@ -21,9 +22,11 @@ export default function LinksPage() {
   const [links, setLinks] = useState<ShortLink[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
-  const [copiedId, setCopiedId] = useState<string | null>(null)
+
+  const [origin, setOrigin] = useState("")
 
   useEffect(() => {
+    setOrigin(typeof window !== 'undefined' ? window.location.origin : '')
     fetchLinks()
   }, [])
 
@@ -36,13 +39,6 @@ export default function LinksPage() {
     } finally {
       setIsLoading(false)
     }
-  }
-
-  const handleCopy = (shortCode: string, id: string) => {
-    const url = `${process.env.NEXT_PUBLIC_REDIRECT_BASE_URL || "http://localhost:8080"}/${shortCode}`
-    navigator.clipboard.writeText(url)
-    setCopiedId(id)
-    setTimeout(() => setCopiedId(null), 2000)
   }
 
   if (isLoading) return <div className="font-mono text-sm">RETRIEVING ROUTING TABLE...</div>
@@ -91,7 +87,7 @@ export default function LinksPage() {
               </tr>
             ) : (
               links.map((link) => {
-                const shortUrl = `${process.env.NEXT_PUBLIC_REDIRECT_BASE_URL || "http://localhost:8080"}/${link.shortCode}`
+                const shortUrl = `${origin}/${link.shortCode}`
                 const isExpired = link.expiresAt && new Date(link.expiresAt) < now;
                 const isInactive = !link.isActive;
                 const isDead = isExpired || isInactive;
@@ -104,29 +100,9 @@ export default function LinksPage() {
                         {link.originalUrl}
                       </div>
                     </td>
-                    <td className="px-6 py-4">
-                      <div className="flex items-center gap-2">
-                        <span className="truncate max-w-[150px]">{shortUrl}</span>
-                        {!isDead && (
-                          <>
-                            <button
-                              onClick={() => handleCopy(link.shortCode, link.id)}
-                              className="text-muted-foreground hover:text-foreground transition-colors"
-                              title="Copy to clipboard"
-                            >
-                              {copiedId === link.id ? <CheckCircle size={14} className="text-green-500" /> : <Copy size={14} />}
-                            </button>
-                            <a
-                              href={shortUrl}
-                              target="_blank"
-                              rel="noopener noreferrer"
-                              className="text-muted-foreground hover:text-foreground transition-colors"
-                              title="Open link"
-                            >
-                              <ExternalLink size={14} />
-                            </a>
-                          </>
-                        )}
+                    <td className="px-6 py-4 max-w-[300px]">
+                      <div className="flex flex-col gap-2">
+                        <ShortLinkDisplay shortUrl={shortUrl} />
                         {isDead && (
                            <span className="text-xs text-red-500 flex items-center gap-1"><XCircle size={12}/> This link has expired</span>
                         )}

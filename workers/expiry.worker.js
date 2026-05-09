@@ -54,3 +54,5 @@ worker.on("completed", (job) => {
 worker.on("failed", (job, err) => {
   console.error(`Job failed: ${job?.name}`, err);
 });
+
+console.log("Expiry worker successfully started and listening to expiry-queue...");

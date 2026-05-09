@@ -74,6 +74,10 @@ const createShortLink = asyncHandler(async (req, res) => {
     60 * 60
   );
 
+  const protocol = req.headers["x-forwarded-proto"] || req.protocol;
+  const host = req.headers["x-forwarded-host"] || req.get("host");
+  const baseUrl = `${protocol}://${host}`;
+
   return res.status(201).json(
     new ApiResponse(
       201,
@@ -81,7 +85,7 @@ const createShortLink = asyncHandler(async (req, res) => {
         link: createdLink,
         serverId: process.env.SERVER_ID,
         allocatedId,
-        shortUrl: `${process.env.BASE_URL}/${shortCode}`,
+        shortUrl: `${baseUrl}/${shortCode}`,
       },
       "Short link created successfully"
     )
@@ -114,12 +118,12 @@ const redirectToOriginalUrl = asyncHandler(async (req, res) => {
   const cachedLink = JSON.parse(cached);
 
   if (!cachedLink.isActive) {
-    throw new ApiError(403, "Link is disabled");
+    return res.redirect(302, "/expired?reason=disabled");
   }
 
   if (cachedLink.expiresAt && new Date(cachedLink.expiresAt) < new Date()) {
     await redisConnection.del(cacheKey);
-    throw new ApiError(403, "Link has expired");
+    return res.redirect(302, "/expired?reason=expired");
   }
 
   await clickQueue.add("log-click", {
@@ -140,15 +144,15 @@ const redirectToOriginalUrl = asyncHandler(async (req, res) => {
     .limit(1);
 
   if (!link) {
-    throw new ApiError(404, "Short link not found");
+    return res.redirect(302, "/expired?reason=not_found");
   }
 
   if (!link.isActive) {
-    throw new ApiError(403, "Link is disabled");
+    return res.redirect(302, "/expired?reason=disabled");
   }
 
   if (link.expiresAt && new Date(link.expiresAt) < new Date()) {
-    throw new ApiError(403, "Link has expired");
+    return res.redirect(302, "/expired?reason=expired");
   }
 
 await redisConnection.set(

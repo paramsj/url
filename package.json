@@ -14,7 +14,7 @@
     "worker:click": "node workers/click.worker.js",
     "worker:expiry": "node workers/expiry.worker.js",
     "start:click-worker": "node workers/click.worker.js",
-    "start:expiry-worker": "node workers/expiry.worker.js",
+    "start:expiry-worker": "node schedulers/expiry.scheduler.js && node workers/expiry.worker.js",
     "scheduler:expiry": "node schedulers/expiry.scheduler.js"
   },
   "keywords": [],

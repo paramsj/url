@@ -5,6 +5,7 @@ import { apiClient } from "@/lib/api-client"
 import { motion } from "framer-motion"
 import { ArrowLeft, Monitor, Globe, Clock, Hash, Calendar, AlertCircle } from "lucide-react"
 import Link from "next/link"
+import { ShortLinkDisplay } from "@/components/ShortLinkDisplay"
 import {
   BarChart,
   Bar,
@@ -45,8 +46,10 @@ export default function StatsPage({ params }: { params: Promise<{ id: string }> 
   const [stats, setStats] = useState<StatsResponse | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState("")
+  const [origin, setOrigin] = useState("")
 
   useEffect(() => {
+    setOrigin(typeof window !== 'undefined' ? window.location.origin : '')
     fetchStats()
   }, [resolvedParams.id])
 
@@ -102,9 +105,16 @@ export default function StatsPage({ params }: { params: Promise<{ id: string }> 
         </Link>
         <div>
           <h1 className="font-pixel text-3xl mb-1">ROUTE TELEMETRY</h1>
-          <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
-            ID: {resolvedParams.id}
-          </p>
+          <div className="flex flex-col gap-2 mt-2">
+            <p className="text-xs font-mono text-muted-foreground uppercase tracking-wider">
+              ID: {resolvedParams.id}
+            </p>
+            {stats && origin && (
+              <div className="bg-background/50 border border-foreground/10 p-2 max-w-lg">
+                <ShortLinkDisplay shortUrl={`${origin}/${stats.link.shortCode}`} />
+              </div>
+            )}
+          </div>
         </div>
       </div>
 

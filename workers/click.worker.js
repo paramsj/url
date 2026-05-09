@@ -37,3 +37,5 @@ worker.on("completed", (job) => {
 worker.on("failed", (job, err) => {
   console.error(`Click job failed: ${job?.id}`, err);
 });
+
+console.log("Click worker successfully started and listening to click-queue...");

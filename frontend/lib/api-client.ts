@@ -1,5 +1,5 @@
-export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || 'http://localhost:8080/api/v1';
-export const REDIRECT_BASE_URL = process.env.NEXT_PUBLIC_REDIRECT_BASE_URL || 'http://localhost:8080';
+export const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL || '/api/v1';
+export const REDIRECT_BASE_URL = process.env.NEXT_PUBLIC_REDIRECT_BASE_URL || '';
 
 export class ApiError extends Error {
   constructor(public status: number, message: string) {
@@ -11,7 +11,7 @@ export class ApiError extends Error {
 async function request<T>(endpoint: string, options: RequestInit = {}): Promise<T> {
   const token = typeof window !== 'undefined' ? localStorage.getItem('accessToken') : null;
   const headers = new Headers(options.headers || {});
-  
+
   headers.set('Content-Type', 'application/json');
   if (token) {
     headers.set('Authorization', `Bearer ${token}`);
@@ -22,20 +22,22 @@ async function request<T>(endpoint: string, options: RequestInit = {}): Promise<
     headers,
   });
 
-  if (response.status === 401) {
-    if (typeof window !== 'undefined') {
-      localStorage.removeItem('accessToken');
-      window.location.href = '/login';
-    }
-    throw new ApiError(401, 'Unauthorized');
-  }
-
   if (!response.ok) {
-    let message = 'API Error';
+    let message = response.statusText || 'API Error';
     try {
       const data = await response.json();
       message = data.message || message;
-    } catch (e) {}
+    } catch (e) { }
+
+    if (response.status === 401) {
+      if (typeof window !== 'undefined') {
+        localStorage.removeItem('accessToken');
+        if (!window.location.pathname.startsWith('/login') && !window.location.pathname.startsWith('/register')) {
+          window.location.href = '/login';
+        }
+      }
+    }
+
     throw new ApiError(response.status, message);
   }
 

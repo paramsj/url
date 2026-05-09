@@ -5,6 +5,7 @@ import { apiClient } from "@/lib/api-client"
 import { motion } from "framer-motion"
 import { Plus, Link as LinkIcon, MousePointerClick, Activity, Clock, AlertTriangle, Infinity as InfinityIcon } from "lucide-react"
 import Link from "next/link"
+import { ShortLinkDisplay } from "@/components/ShortLinkDisplay"
 
 interface ShortLink {
   id: string
@@ -28,7 +29,10 @@ export default function DashboardPage() {
   const [isCreating, setIsCreating] = useState(false)
   const [createError, setCreateError] = useState("")
 
+  const [origin, setOrigin] = useState("")
+
   useEffect(() => {
+    setOrigin(typeof window !== 'undefined' ? window.location.origin : '')
     fetchLinks()
   }, [])
 
@@ -236,12 +240,12 @@ export default function DashboardPage() {
                 
                 return (
                   <div key={link.id} className={`flex flex-col sm:flex-row sm:items-center justify-between p-4 border transition-colors gap-4 ${isInactive ? 'opacity-50 border-foreground/5 bg-foreground/5' : 'border-foreground/10 hover:border-foreground/30'}`}>
-                    <div className="overflow-hidden">
-                      <div className="font-mono text-sm font-bold truncate flex items-center gap-2">
-                        {process.env.NEXT_PUBLIC_REDIRECT_BASE_URL || "http://localhost:8080"}/{link.shortCode}
-                        {isExpired && <span className="bg-red-500/10 text-red-500 px-1.5 py-0.5 text-[10px] uppercase rounded">Expired</span>}
+                    <div className="overflow-hidden flex-1 max-w-full">
+                      <div className="flex flex-wrap items-center gap-2 mb-1">
+                        <ShortLinkDisplay shortUrl={`${origin}/${link.shortCode}`} />
+                        {isExpired && <span className="bg-red-500/10 text-red-500 px-1.5 py-0.5 text-[10px] uppercase rounded whitespace-nowrap">Expired</span>}
                       </div>
-                      <div className="text-xs font-mono text-muted-foreground truncate mt-1">
+                      <div className="text-xs font-mono text-muted-foreground break-all whitespace-normal max-w-full">
                         {link.originalUrl}
                       </div>
                     </div>
