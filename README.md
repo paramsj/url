@@ -1,206 +1,444 @@
 <div align="center">
-  <h1 align="center">🚀 Enterprise URL Shortener</h1>
-  <p align="center">
-    <strong>A highly scalable, containerized, and environment-agnostic URL shortener with real-time analytics.</strong>
-  </p>
+
+# Enterprise URL Shortener
+
+**A production-ready, horizontally scalable URL shortener with asynchronous analytics, distributed API instances, and a containerized deployment architecture.**
+
 </div>
 
 ---
 
-## 📖 Overview
+# Overview
 
-This project is a production-ready, highly-available URL Shortener built with a modern, decoupled architecture. It features a horizontally scaled Node.js backend load-balanced by **Nginx**, asynchronous telemetry processing using **BullMQ** and **Redis**, and a sleek, dynamic **Next.js** frontend.
+This project is a production-grade URL Shortener designed around scalability, reliability, and clean system design principles.
 
-The entire infrastructure is containerized using **Docker**, making it completely environment-agnostic. Whether you are running it on your local machine or deploying it to an AWS EC2 instance, the application dynamically resolves its own routing without relying on brittle, hardcoded base URLs.
+The application consists of a **Next.js frontend**, **three Express API instances** behind an **Nginx reverse proxy/load balancer**, **PostgreSQL** for persistent storage, **Redis** for caching and distributed queues, and **BullMQ workers** for asynchronous background processing.
 
-## ✨ Features
+The infrastructure is fully containerized with Docker, allowing identical deployments across local development, staging, and production environments.
 
-- **🔗 Core Shortening:** Generate clean, reliable short URLs with optional custom aliases.
-- **⏱️ Link Expiration:** Set exact expiration dates and times for links. A dedicated background worker automatically cleans up expired links.
-- **📊 Real-time Analytics:** Track link clicks, referrer sources, IP addresses, and user-agents. Telemetry is processed asynchronously via Redis queues so it never slows down the user redirection.
-- **⚖️ High Availability:** The API is horizontally scaled across multiple instances (`app1`, `app2`, `app3`) load-balanced via Nginx using a `least_conn` algorithm.
-- **🛡️ Secure Authentication:** JWT-based user authentication and secure API endpoints.
-- **🎨 Premium UI:** A futuristic, responsive dashboard built with Next.js, TailwindCSS, and Framer Motion.
-- **🐳 Environment Agnostic:** Nginx handles internal routing (`/api` to backend, `/` to frontend), eliminating the need for complex CORS setups or `.env` base URL configurations.
+Instead of relying on frontend environment variables for routing, **Nginx acts as the single entry point**, forwarding frontend, API, and redirect requests internally. This makes the deployment environment-agnostic while significantly simplifying configuration.
 
 ---
 
-## 🏗️ System Architecture
+# Features
+
+- Production-ready URL shortening
+- Custom aliases for shortened URLs
+- Link expiration with automatic cleanup
+- JWT-based authentication
+- Click analytics (IP, User-Agent, Referrer, Timestamp)
+- Redis-backed caching
+- BullMQ background workers
+- Horizontally scalable API layer
+- Nginx reverse proxy and load balancing
+- Dockerized deployment
+- Responsive Next.js dashboard
+- Environment-agnostic architecture
+
+---
+
+# Architecture
 
 ```text
-                 +-------------------+
-                 |                   |
-                 |   User Browser    |
-                 |                   |
-                 +--------+----------+
-                          |
-               (HTTP/80 or HTTP/8080)
-                          |
-                          v
-                 +-------------------+
-                 |                   |
-                 | NGINX Load Balancer|
-                 | (Reverse Proxy)   |
-                 +--------+----------+
-                          |
-      +-------------------+-------------------+
-      |                   |                   |
- (Requests to /)  (Requests to /api)  (Requests to /:shortCode)
-      |                   |                   |
-      v                   v                   v
-+------------+    +---------------+   +---------------+
-|            |    |               |   |               |
-|  Frontend  |    |  API Server   |   |  API Server   |
-| (Next.js)  |    |  (Node.js)    |   |  (Node.js)    |
-|            |    |   Instance 1  |   |   Instance 2  |
-+------------+    +-------+-------+   +-------+-------+
-                          |                   |
-                          +---------+---------+
-                                    |
-            +-----------------------+-----------------------+
-            |                       |                       |
-            v                       v                       v
-  +-------------------+   +-------------------+   +-------------------+
-  |                   |   |                   |   |                   |
-  |    PostgreSQL     |   |   Redis (Cache    |   |  BullMQ Workers   |
-  |  (Primary DB)     |   |   & Queue)        |   | (Click & Expiry)  |
-  +-------------------+   +-------------------+   +-------------------+
+                          Client Browser
+                                │
+                                │
+                         HTTP (80 / 8080)
+                                │
+                                ▼
+                    +-------------------------+
+                    |         NGINX           |
+                    | Reverse Proxy & LB      |
+                    | least_conn Scheduling   |
+                    +-----------+-------------+
+                                │
+         ┌──────────────────────┼──────────────────────┐
+         │                      │                      │
+         ▼                      ▼                      ▼
+    API Server 1           API Server 2          API Server 3
+      Express                Express               Express
+         │                      │                      │
+         └──────────────┬───────────────┬──────────────┘
+                        │               │
+                        ▼               ▼
+                 PostgreSQL         Redis
+                (Primary DB)    Cache + BullMQ
+                        │               │
+                        │               │
+                        ▼               ▼
+                  Click Worker    Expiry Worker
 ```
 
 ---
 
-## 📋 Prerequisites
+# Request Flow
 
-Before you begin, ensure you have the following installed on your machine or server:
-- **Docker** & **Docker Compose**
-- **Node.js** (v20+) - *Only required if running locally without Docker*
-- A **PostgreSQL** database (e.g., Supabase, Neon, or local Postgres)
+## URL Creation
+
+1. Client sends a request to create a shortened URL.
+2. Nginx forwards the request to one of the three API instances.
+3. The selected API instance queries PostgreSQL for the latest counter/state required for generating the next short code.
+4. The API generates the next unique short code.
+5. URL metadata is stored in PostgreSQL.
+6. Frequently accessed information is cached inside Redis.
+7. The generated short URL is returned to the client.
+
+Since every API instance consults the same PostgreSQL database before generating a new short code, URL generation remains consistent regardless of which backend instance handles the request.
 
 ---
 
-## ⚙️ Environment Variables
+## URL Redirection
 
-The project requires a `.env` file in the **root directory**. 
+1. User opens a shortened URL.
+2. Nginx forwards the request to an API instance.
+3. API checks Redis for the destination URL.
+4. On a cache miss, PostgreSQL is queried and Redis is updated.
+5. Redirect response is immediately returned.
+6. Analytics information is pushed into a BullMQ queue.
+7. Click worker processes analytics asynchronously.
 
-Because of the reverse-proxy architecture, the frontend requires **zero** environment variables for deployment! All routing is handled dynamically via Nginx headers.
+This ensures the redirect latency is not affected by database writes.
 
-Create a `.env` file in the root directory:
+---
+
+## Link Expiration
+
+1. Scheduler periodically scans for expired links.
+2. Expired links are marked inactive.
+3. Associated Redis cache entries are invalidated.
+4. Future redirect requests receive an appropriate response.
+
+---
+
+# Technology Stack
+
+| Layer | Technology |
+|--------|------------|
+| Frontend | Next.js, React, Tailwind CSS, Framer Motion |
+| Backend | Node.js, Express |
+| Database | PostgreSQL |
+| ORM | Drizzle ORM |
+| Cache | Redis |
+| Queue | BullMQ |
+| Reverse Proxy | Nginx |
+| Authentication | JWT |
+| Deployment | Docker, Docker Compose |
+
+---
+
+# Project Structure
+
+```text
+.
+├── controllers/
+├── db/
+├── frontend/
+│   ├── app/
+│   ├── components/
+│   └── lib/
+├── middlewares/
+├── queues/
+├── routes/
+├── schedulers/
+├── services/
+├── workers/
+├── docker-compose.yml
+├── Dockerfile
+├── nginx.conf
+├── app.js
+└── index.js
+```
+
+---
+
+# Environment Variables
+
+Create a `.env` file in the project root.
 
 ```env
-# Database Configuration
-DATABASE_URL="postgresql://user:password@host:port/dbname?sslmode=require"
+DATABASE_URL=postgresql://user:password@host:port/database
 
-# Redis Configuration (Must match docker-compose service name)
-REDIS_URL="redis://redis:6379"
+REDIS_URL=redis://redis:6379
 
-# Security
-JWT_SECRET="your-super-secret-jwt-key"
+JWT_SECRET=your-secret-key
 
-# Application (Optional - defaults are fine for Docker)
 PORT=3000
 ```
 
----
-
-## 🚀 Getting Started (Docker - Recommended)
-
-The easiest and most robust way to run the application is via Docker. This will spin up the Nginx load balancer, the Next.js frontend, 3 API server instances, the Redis cache, and both background workers.
-
-1. **Clone the repository:**
-   ```bash
-   git clone https://github.com/yourusername/url-shortener.git
-   cd url-shortener
-   ```
-
-2. **Configure your environment:**
-   Create your `.env` file in the root directory as shown above.
-
-3. **Build and start the infrastructure:**
-   ```bash
-   docker compose up -d --build
-   ```
-
-4. **Access the application:**
-   - **Local Development:** Open your browser and navigate to `http://localhost:8080` (Nginx handles the port forwarding to avoid local port conflicts).
-   - **Production (EC2):** If deploying to a server, edit `docker-compose.yml` to map Nginx to port 80 (`"80:80"` instead of `"8080:80"`), and access via your server's IP or Domain.
-
-5. **Stopping the application:**
-   ```bash
-   docker compose down
-   ```
+No frontend API URL configuration is required when deployed through Nginx.
 
 ---
 
-## 🛠️ Local Development (Without Docker)
+# Running with Docker
 
-If you wish to develop without Docker, you will need to run the services individually.
+Clone the repository
 
-**1. Start your local Redis server:**
-Ensure Redis is running on `localhost:6379`. Update your `.env` file to `REDIS_URL="redis://localhost:6379"`.
+```bash
+git clone https://github.com/yourusername/url-shortener.git
 
-**2. Start the Backend API:**
+cd url-shortener
+```
+
+Create the environment file
+
+```bash
+touch .env
+```
+
+Build and start
+
+```bash
+docker compose up --build -d
+```
+
+Application
+
+```
+http://localhost:8080
+```
+
+Stop
+
+```bash
+docker compose down
+```
+
+---
+
+# Local Development
+
+Start Redis
+
+```bash
+redis-server
+```
+
+Run backend
+
 ```bash
 npm install
-npm run dev:apps  # Starts 3 load-balanced nodemon instances
+
+npm run dev:apps
 ```
 
-**3. Start the Background Workers:**
-In a new terminal:
-```bash
-npm run start:expiry-worker
-```
-In another terminal:
+Run click worker
+
 ```bash
 npm run start:click-worker
 ```
 
-**4. Start the Frontend:**
-In a new terminal:
+Run expiry worker
+
+```bash
+npm run start:expiry-worker
+```
+
+Run frontend
+
 ```bash
 cd frontend
+
 npm install
+
 npm run dev
 ```
 
-*Note: Without Nginx running, you will need to manually configure CORS and API Base URLs in the frontend during local non-docker development.*
+---
+
+# Background Workers
+
+## Click Worker
+
+The redirect endpoint never writes analytics directly.
+
+Instead, it publishes a job into BullMQ.
+
+The Click Worker consumes these jobs independently and stores:
+
+- IP Address
+- User Agent
+- Referrer
+- Timestamp
+
+This keeps redirect latency consistently low.
 
 ---
 
-## 📂 Project Structure
+## Expiry Worker
 
-```text
-.
-├── controllers/          # API route logic
-├── db/                   # Drizzle ORM schemas and connections
-├── frontend/             # Next.js Application
-│   ├── app/              # Next.js App Router pages
-│   ├── components/       # Reusable UI components
-│   └── lib/              # API Client and utilities
-├── queues/               # BullMQ queue initializations
-├── routes/               # Express API routes
-├── schedulers/           # Cron-job initializations
-├── workers/              # Background job processors (Clicks & Expirations)
-├── .dockerignore         # Exclusions to keep images slim
-├── docker-compose.yml    # Infrastructure orchestration
-├── Dockerfile            # Backend image definition
-└── nginx.conf            # Load balancer & reverse proxy rules
-```
+Runs periodically to:
+
+- Find expired links
+- Mark them inactive
+- Remove cached Redis entries
+- Prevent future redirects
 
 ---
 
-## 🔍 How the Workers Function
+# Scalability Considerations
 
-To maintain high performance on the API layer, heavy operations are offloaded to background workers:
+The application has been designed with horizontal scaling in mind.
 
-1. **Click Worker:** When a user visits a short link, the API instantly redirects them. Simultaneously, it fires an event to the `click-queue`. The click worker picks this up and safely writes the telemetry (IP, User-Agent, Date) to the PostgreSQL database in the background.
-2. **Expiry Worker:** A scheduler runs a cron job every 5 minutes. The expiry worker checks the database for any links that have passed their `expiresAt` date, invalidates their Redis cache, and sets them to `inactive`.
+### Stateless API Servers
+
+Each backend instance is completely stateless.
+
+Any instance can serve any request since all persistent state resides in PostgreSQL and Redis.
 
 ---
 
-## 🤝 Contributing
+### Horizontal API Scaling
 
-Contributions, issues, and feature requests are welcome! Feel free to check the [issues page](#).
+Adding another backend server only requires registering it with Nginx.
 
-## 📄 License
+No application logic changes are required.
+
+---
+
+### Shared URL Generation
+
+All API instances generate URLs against the same PostgreSQL state.
+
+This guarantees uniqueness regardless of which backend handles the request.
+
+---
+
+### Redis Caching
+
+Frequently requested URLs are served directly from Redis, significantly reducing database load.
+
+---
+
+### Asynchronous Processing
+
+Analytics are processed independently from redirect requests using BullMQ workers.
+
+Redirect performance remains nearly constant even during traffic spikes.
+
+---
+
+# Possible Future Improvements
+
+Several production-grade improvements could further increase scalability and reliability.
+
+## Distributed ID Generation
+
+Instead of consulting PostgreSQL for each new short code, a distributed ID generator such as:
+
+- Snowflake IDs
+- Segment allocation
+- Hi-Lo algorithm
+
+could eliminate contention during URL creation.
+
+---
+
+## Read Replicas
+
+Introduce PostgreSQL read replicas to separate read traffic from writes.
+
+This would significantly improve throughput for analytics-heavy workloads.
+
+---
+
+## Redis Cluster
+
+Replace a single Redis instance with Redis Cluster or Sentinel to improve fault tolerance and availability.
+
+---
+
+## Rate Limiting
+
+Implement Redis-backed distributed rate limiting to prevent abuse and denial-of-service attacks.
+
+---
+
+## Monitoring
+
+Integrate:
+
+- Prometheus
+- Grafana
+- Loki
+
+to collect metrics, logs, and application health.
+
+---
+
+## Distributed Tracing
+
+Use OpenTelemetry to trace requests across:
+
+- Nginx
+- Express
+- Redis
+- PostgreSQL
+- BullMQ Workers
+
+This greatly simplifies production debugging.
+
+---
+
+## CDN Integration
+
+Serve static frontend assets through a CDN to reduce latency globally.
+
+---
+
+## Multi-Region Deployment
+
+Deploy API instances across multiple regions while keeping URL generation consistent using distributed ID allocation.
+
+---
+
+## Message Broker
+
+For very high throughput systems, BullMQ can later be replaced by Kafka or RabbitMQ for improved durability and throughput.
+
+---
+
+## Cache Warming
+
+Popular URLs can be proactively cached to reduce cold-start latency.
+
+---
+
+## URL Abuse Detection
+
+Automatically detect:
+
+- phishing
+- malware
+- spam domains
+
+before allowing URL creation.
+
+---
+
+## Advanced Analytics
+
+Add dashboards showing:
+
+- Geographic traffic distribution
+- Browser statistics
+- Device breakdown
+- Operating systems
+- Time-series click trends
+- Top-performing links
+
+---
+
+## CI/CD
+
+Automate deployments using GitHub Actions with:
+
+- automated testing
+- Docker image builds
+- vulnerability scanning
+- zero-downtime deployments
+
+---
+
+# License
 
 This project is licensed under the MIT License.
