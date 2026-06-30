@@ -1,6 +1,6 @@
 <div align="center">
 
-# Enterprise URL Shortener
+# URL Shortener
 
 **A production-ready, horizontally scalable URL shortener with asynchronous analytics, distributed API instances, and a containerized deployment architecture.**
 
