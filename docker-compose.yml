@@ -1,14 +1,12 @@
-version: "3.9"
-
 services:
 
   nginx:
-    image: nginx:latest
+    image: nginx:alpine
     container_name: nginx
     restart: always
 
     ports:
-      - "8080:80"
+      - "80:80"
 
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
@@ -25,7 +23,7 @@ services:
     restart: always
 
   app1:
-    build: .
+    build: ./backend
     container_name: app1
     restart: always
 
@@ -41,7 +39,7 @@ services:
       - redis
 
   app2:
-    build: .
+    build: ./backend
     container_name: app2
     restart: always
 
@@ -57,7 +55,7 @@ services:
       - redis
 
   app3:
-    build: .
+    build: ./backend
     container_name: app3
     restart: always
 
@@ -78,7 +76,7 @@ services:
     restart: always
 
   click-worker:
-    build: .
+    build: ./backend
     container_name: click-worker
     restart: always
 
@@ -94,7 +92,7 @@ services:
       - redis
 
   expiry-worker:
-    build: .
+    build: ./backend
     container_name: expiry-worker
     restart: always
 

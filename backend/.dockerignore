@@ -7,4 +7,6 @@ npm-debug.log
 README.md
 frontend
 docker-compose.yml
+token.txt
+*token*.txt
 Dockerfile

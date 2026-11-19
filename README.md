@@ -40,33 +40,38 @@ Instead of relying on frontend environment variables for routing, **Nginx acts a
 # Architecture
 
 ```text
-                          Client Browser
-                                │
-                                │
-                         HTTP (80 / 8080)
-                                │
-                                ▼
-                    +-------------------------+
-                    |         NGINX           |
-                    | Reverse Proxy & LB      |
-                    | least_conn Scheduling   |
-                    +-----------+-------------+
-                                │
-         ┌──────────────────────┼──────────────────────┐
-         │                      │                      │
-         ▼                      ▼                      ▼
-    API Server 1           API Server 2          API Server 3
-      Express                Express               Express
-         │                      │                      │
-         └──────────────┬───────────────┬──────────────┘
-                        │               │
-                        ▼               ▼
-                 PostgreSQL         Redis
-                (Primary DB)    Cache + BullMQ
-                        │               │
-                        │               │
-                        ▼               ▼
-                  Click Worker    Expiry Worker
+                              Client Browser
+                                    │
+                                    │ HTTP (Port 80)
+                                    ▼
+                        +-------------------------+
+                        |         NGINX           |
+                        | Reverse Proxy & Gateway |
+                        +------------+------------+
+                                     │
+             ┌───────────────────────┴───────────────────────┐
+             │                                               │
+             ▼                                               ▼
+    +-----------------+                             +-----------------+
+    |    Frontend     |                             |  Backend (API)  |
+    | Next.js App (:) |                             |   least_conn    |
+    +-----------------+                             +--------+--------+
+                                                             │
+                             ┌───────────────────────────────┼───────────────────────────────┐
+                             │                               │                               │
+                             ▼                               ▼                               ▼
+                      API Server 1                    API Server 2                    API Server 3
+                     Express (app1)                  Express (app2)                  Express (app3)
+                             │                               │                               │
+                             └───────────────┬───────────────┴───────────────┬───────────────┘
+                                             │                               │
+                                             ▼                               ▼
+                                        PostgreSQL                         Redis
+                                     (Supabase / DB)                  Cache + BullMQ
+                                             │                               │
+                                             │                               │
+                                             ▼                               ▼
+                                       Click Worker                    Expiry Worker
 ```
 
 ---
@@ -75,15 +80,15 @@ Instead of relying on frontend environment variables for routing, **Nginx acts a
 
 ## URL Creation
 
-1. Client sends a request to create a shortened URL.
-2. Nginx forwards the request to one of the three API instances.
-3. The selected API instance queries PostgreSQL for the latest counter/state required for generating the next short code.
-4. The API generates the next unique short code.
+1. Client sends a request to create a shortened URL (`POST /api/v1/links`).
+2. Nginx forwards the request to one of the backend API instances.
+3. The selected API instance fetches its next allocated numeric ID from the `id_ranges` table (e.g., `app1` allocates from `1,000,000`–`10,000,000`).
+4. The numeric ID is encoded into a Base62 short code.
 5. URL metadata is stored in PostgreSQL.
-6. Frequently accessed information is cached inside Redis.
-7. The generated short URL is returned to the client.
+6. The active link is cached in Redis with a 1-hour TTL.
+7. The generated short URL (e.g., `http://localhost/4c94`) is returned to the client.
 
-Since every API instance consults the same PostgreSQL database before generating a new short code, URL generation remains consistent regardless of which backend instance handles the request.
+Because each backend server instance owns a non-overlapping segment in `id_ranges`, ID generation is contention-free and horizontally scalable without centralized locks.
 
 ---
 
@@ -130,39 +135,55 @@ This ensures the redirect latency is not affected by database writes.
 
 ```text
 .
-├── controllers/
-├── db/
+├── backend/
+│   ├── controllers/      # Route request handlers
+│   ├── db/               # PostgreSQL connection, Drizzle schema & seed script
+│   ├── drizzle/          # SQL database migration files
+│   ├── middlewares/      # Authentication & authorization guards
+│   ├── queues/           # BullMQ queue definitions
+│   ├── routes/           # Express router endpoints
+│   ├── schedulers/       # Cron/interval job schedulers
+│   ├── utils/            # Base62 encoder, token generators, error helpers
+│   ├── workers/          # BullMQ background workers (click, expiry)
+│   ├── app.js            # Express application setup
+│   ├── index.js          # Server bootstrap
+│   ├── Dockerfile        # Backend container image build
+│   └── package.json
 ├── frontend/
-│   ├── app/
-│   ├── components/
-│   └── lib/
-├── middlewares/
-├── queues/
-├── routes/
-├── schedulers/
-├── services/
-├── workers/
-├── docker-compose.yml
-├── Dockerfile
-├── nginx.conf
-├── app.js
-└── index.js
+│   ├── app/              # Next.js App Router (dashboard, login, register)
+│   ├── components/       # UI components & topology visualization
+│   ├── lib/              # API client & utilities
+│   ├── public/           # Static images & icons
+│   ├── Dockerfile        # Frontend container image build
+│   └── package.json
+├── nginx.conf            # Reverse proxy & load balancing rules
+├── docker-compose.yml    # Multi-container orchestration stack
+├── .env.example          # Root environment template
+├── README.md
+├── README-ARCHITECTURE.md
+└── SETUP.md
 ```
 
 ---
 
 # Environment Variables
 
-Create a `.env` file in the project root.
+Create a `.env` file in the project root (see [`.env.example`](file://.env.example) for defaults):
 
 ```env
-DATABASE_URL=postgresql://user:password@host:port/database
+# Required
+DATABASE_URL=postgresql://user:password@host:port/dbname?sslmode=require
+ACCESS_TOKEN_SECRET=your-strong-access-token-secret
+REFRESH_TOKEN_SECRET=your-strong-refresh-token-secret
 
-REDIS_URL=redis://redis:6379
-
-JWT_SECRET=your-secret-key
-
+# Optional / Defaulted
+NODE_ENV=development
+REDIS_URL=redis://localhost:6379
+CORS_ORIGIN=http://localhost:3000,http://localhost
+ACCESS_TOKEN_EXPIRY=15m
+REFRESH_TOKEN_EXPIRY=7d
 PORT=3000
+SERVER_ID=app1
 ```
 
 No frontend API URL configuration is required when deployed through Nginx.
@@ -182,10 +203,18 @@ cd url-shortener
 Create the environment file
 
 ```bash
-touch .env
+cp .env.example .env
+# Fill in your DATABASE_URL and JWT secrets in .env
 ```
 
-Build and start
+Apply database migrations and seed ID ranges
+
+```bash
+docker compose run --rm app1 npm run db:push
+docker compose run --rm app1 npm run db:seed
+```
+
+Build and start all services
 
 ```bash
 docker compose up --build -d
@@ -194,7 +223,7 @@ docker compose up --build -d
 Application
 
 ```
-http://localhost:8080
+http://localhost
 ```
 
 Stop
@@ -216,7 +245,13 @@ redis-server
 Run backend
 
 ```bash
+cd backend
+
 npm install
+
+npm run db:push
+
+npm run db:seed
 
 npm run dev:apps
 ```
@@ -224,12 +259,16 @@ npm run dev:apps
 Run click worker
 
 ```bash
+cd backend
+
 npm run start:click-worker
 ```
 
 Run expiry worker
 
 ```bash
+cd backend
+
 npm run start:expiry-worker
 ```
 

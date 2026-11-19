@@ -1,13 +1,19 @@
 import express from 'express';
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-import { url } from 'inspector';
 import bodyParser from 'body-parser';
 
 const app = express();
 
+// Trust reverse proxy (Nginx, cloud load balancers) so req.ip resolves real client IP
+app.set('trust proxy', true);
+
+const allowedOrigins = process.env.CORS_ORIGIN
+    ? process.env.CORS_ORIGIN.split(',').map((origin) => origin.trim())
+    : ['http://localhost:3000', 'http://localhost', 'http://localhost:8080'];
+
 app.use(cors({
-    origin: process.env.CORS_ORIGIN || 'http://localhost:3000',
+    origin: allowedOrigins,
     credentials: true,
 }));
 

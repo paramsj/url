@@ -15,7 +15,10 @@
     "worker:expiry": "node workers/expiry.worker.js",
     "start:click-worker": "node workers/click.worker.js",
     "start:expiry-worker": "node schedulers/expiry.scheduler.js && node workers/expiry.worker.js",
-    "scheduler:expiry": "node schedulers/expiry.scheduler.js"
+    "scheduler:expiry": "node schedulers/expiry.scheduler.js",
+    "db:seed": "node db/seed.js",
+    "db:generate": "drizzle-kit generate",
+    "db:push": "drizzle-kit push"
   },
   "keywords": [],
   "author": "",
